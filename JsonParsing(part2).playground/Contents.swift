@@ -300,11 +300,110 @@ let User = try JSONDecoder().decode(user.self, from: jsonData)
     print(User.name)
     print(User.city)
 
+// Consuming Json in Web API
+
+//fetching data from api using urlSession
+
+
+    struct Address : Decodable {
+        var street : String
+        var suite : String
+        var city : String
+        var geo : Geo
+    }
+    struct User1 : Decodable {
+        var id : Int
+        var name : String
+        var username : String
+        var email : String
+        var address : Address
+       
+    }
+struct Geo: Decodable {
+    
+    let latitude: String
+    let longitude: String
+    
+    private enum CodingKeys: String, CodingKey {
+        case latitude = "lat"
+        case longitude = "lng"
+    }
+}
+
+
+let url = URL(string:"https://jsonplaceholder.typicode.com/users")!
+URLSession.shared.dataTask(with: url) { data, response, error in
+    
+    guard error == nil,
+          let data = data else {
+        print(error)
+        return
+    }
+    let user = try? JSONDecoder().decode([User1].self, from: data)
+    if let user = user {
+         print(data)
+        print(user[0].name)
+        print(user[0].address.street)
+        print("*****************")
+        print(user[0].geo.longitude)
+    }
+    
+    }.resume()
+    
+    //Implementing and Populating models with the APi result
+    
+//Custom key
 
 
 
-
-
-
-
-
+ 
+struct User: Decodable {
+    let name: String
+    let age: Int
+}
+ 
+struct AnyKey: CodingKey {
+    
+    var stringValue: String
+    
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+    }
+    
+    var intValue: Int? {
+        return nil
+    }
+    
+    init?(intValue: Int) {
+        return nil
+    }
+}
+ 
+struct DecodingStrategy {
+    
+    static var firstUpperCaseLetter: ([CodingKey]) -> CodingKey {
+        return { keys -> CodingKey in
+            let key = keys.first!
+            let modifiedKey = key.stringValue.prefix(1).lowercased() + key.stringValue.dropFirst()
+            return AnyKey(stringValue: modifiedKey)!
+        }
+    }
+    
+}
+ 
+let json = """
+    {
+        "Name": "John Doe",
+        "Age": 34
+    }
+"""
+ 
+guard let jsonData = json.data(using: .utf8) else {
+    throw fatalError("Unable to get data!")
+}
+ 
+let decoder = JSONDecoder()
+decoder.keyDecodingStrategy = .custom(DecodingStrategy.firstUpperCaseLetter)
+ 
+let user = try? decoder.decode(User.self, from: jsonData)
+print(user)
